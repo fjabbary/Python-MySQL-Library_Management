@@ -7,48 +7,43 @@ def main_app():
 
     while True:
         
-        print("\n1. Add User \n2. Display Users \n3. Checkout Book \n4. Checkin Book \n5. Add User \n6. Display Users \n7. Display Borrowers \n8. Search Book \n9. Add Author \n10. Display Authors \n11. Display Author details \n12. Add Genre \n13. Displays Genres \n14. Display Genre Details \n15. Export Data \n16. Import Data \n17. exit ")
+        print("\n1. Add User \n2. Display Users \n3. Add Author \n4. Display Authors \n5. Search Author \n6. Add Genre \n7. Display Genres \n8. Add Book \n9. Display Books \n10. Display book_author_genre \n11. Checkout Book \n12. Checkin Book \n13. Display Borrowed Books \n14. Display Borrower Users \n15. Search Book")
         choice = input("Enter your choice: ")
         
         try: 
             if choice == "1":
-                # library.add_book()
                 library.add_user()
             elif choice == "2":
                 library.display_users()   
+            elif choice == "3":
+                library.add_author()   
+            elif choice == "4":
+                library.display_authors()  
+            elif choice == "5":
+                library.search_author()
+            elif choice == "6":
+                library.add_genre()    
+            elif choice == "7":
+                library.display_genres() 
+            elif choice == "8":
+                library.add_book()
+            elif choice == "9":
+                library.display_books()
+            elif choice == "10":
+                library.display_book_author_genre()    
+            elif choice == "11":
+                library.checkout_book()
+            elif choice == "12":
+                library.checkin_book()
+            elif choice == "13":
+                library.display_borrowed_books()
+            elif choice == "14":
+                library.display_borrower_users()  
+            elif choice == "15":
+                library.search_book()
                 
                 
-                
-            # elif choice == "2":
-            #     library.display_books() 
-            # elif choice == "3":
-            #     library.checkout_book()
-            # elif choice == "4":
-            #     library.checkin_book()
-            # elif choice == "5":
-            #     library.add_user()
-            # elif choice == "6":
-            #     library.display_users()        
-            # elif choice == "7":
-            #     library.display_borrower_users()  
-            # elif choice == "8":
-            #     library.search_book() 
-            # elif choice == "9":
-            #     library.add_author() 
-            # elif choice == "10":
-            #     library.display_authors()
-            # elif choice == "11":
-            #     library.display_author_details()
-            # elif choice == "12":
-            #     library.add_genre()
-            # elif choice == "13":
-            #     library.display_genres()
-            # elif choice == "14":
-            #     library.display_genre_details()
-            # elif choice == "15":
-            #     library.export_data()
-            # elif choice == "16":
-            #     library.import_data()
+
             elif choice == "17":
                 exit()
                 

@@ -1,7 +1,6 @@
 import re, json, os, pickle, uuid, time
-from datetime import date
-from dateutil.relativedelta import relativedelta
-from tabulate import tabulate
+from datetime import date, datetime
+
 
 from book import Book
 from user import User
@@ -11,6 +10,8 @@ import variables
 
 import mysql.connector
 from mysql.connector import Error
+
+from collections import namedtuple
 
 class Library:
   def __init__(self):
@@ -39,7 +40,7 @@ class Library:
       
     
   def add_user(self):
-    
+    # Connection Management used using 'with' keyword to remove duplicate codes for closing cursor and connection
     try:
       with self.connect_database() as conn:
         with conn.cursor() as cursor:
@@ -58,12 +59,9 @@ class Library:
      
     except Error as e:
       print("\033[91m", "Failed to add user to database", e, "\033[0m")
-      
-   
     
     
   def display_users(self):
-    # Connection Management used using 'with' keyword to remove duplicate codes for closing cursor and connection
     try:
       with self.connect_database() as conn:
         with conn.cursor() as cursor:
@@ -80,236 +78,295 @@ class Library:
       print("\033[91m", "Failed to fetch users from database", e, "\033[0m")
       
       
+  def add_author(self):
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+           name = input("Enter the name of the author: ")
+           biography = input("Enter biography: ")
+           data = (name, biography)
+           
+           query = "INSERT INTO authors(name, biography) VALUES(%s, %s)"
+           cursor.execute(query, data)
+           conn.commit()
+           print('\33[32m', "Author added to database successfully", "\033[0m")
+      
+    except Error as e:
+      print("\033[91m", "Failed to add author to the database", e, "\033[0m")
+   
+    
+    
+  def display_authors(self):
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          query = "SELECT * FROM authors"
+          cursor.execute(query)
+          authors = cursor.fetchall()
+          conn.commit()
+          print("\033[92m", "Authors fetched successfully!", "\033[0m")
+          
+          for author in authors:
+            print("\033[92m", author, "\033[0m")
+    
+    except Error as e:
+      print("\033[91m", "Failed to fetch authors from database.", e, "\033[0m")
+    
+
+  def search_author(self):
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          name = input("Enter the name of the author: ")
+          query = f"SELECT * FROM authors WHERE name Like '%{name}%'"
+          cursor.execute(query)
+          author = cursor.fetchone()
+          conn.commit()
+          
+          print("\033[92m", "Author details fetched successfully!", "\033[0m")
+          print(author)
+    
+    except Error as e:
+          print("\033[91m", "Failed to fetch author details from database", e, "\033[0m")       
+  
+  
+  def add_genre(self):
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          genre_name = input("Enter the genre name: ")
+          genre_details = input("Enter the genre details: ")
+          query = "INSERT INTO genres(genre_name, genre_details) VALUES(%s, %s)"
+          cursor.execute(query, (genre_name, genre_details))
+          conn.commit()
+          
+          print("\033[92m", "Genre added successfully!", "\033[0m")
+    
+    except Error as e:
+          print("\033[91m", "Failed to add genre into database", e, "\033[0m")       
+  
+    
+  def display_genres(self):
+    try:
+        with self.connect_database() as conn:
+          with conn.cursor() as cursor:
+            query = "SELECT * FROM genres"
+            cursor.execute(query)
+            genres = cursor.fetchall()
+            conn.commit()
+            print("\033[92m", "Genres fetched successfully!", "\033[0m")
+            
+            for genre in genres:
+              print("\033[92m", genre, "\033[0m")
+      
+    except Error as e:
+        print("\033[91m", "Failed to fetch genres from database.", e, "\033[0m")
+
+      
+      
     
   def add_book(self):
-    title = input("Enter the title of the book: ")
-    author = input("Enter the author of the book: ")
-    isbn = input("Enter the ISBN number of the book: ")
-    publication_date = input("Enter the publication date in the format of MM/DD/YYYY: ")
-    genre = input("Enter the genre of the book: ")
-    category = input("Enter the category of the book. 'Fiction' or 'Non-fiction': ")
-    
-    string_regex = r"[a-zA-Z0-9 .]{3,}"
-    date_regex = r"\d{2}/\d{2}/\d{3,4}"
-    # For simplicity of creation of a book data in cli, no regex validation is used for ISBN (ISBN-13 digits)
-    valid_title = re.match(string_regex, title)
-    valid_author = re.match(string_regex, author)
-    valid_date = re.match(date_regex, publication_date) 
-    
-    if valid_title and valid_author and valid_date:
-          new_book = Book(title, author, isbn, publication_date, genre, category, due_date="")
-          self.books[isbn] = new_book
-          print("\033[92m", "Book added successfully!", "\033[0m")
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+            title = input("Enter the title of the book: ")
+            author_id = input("Enter the author id: ")
+            genre_id = input("Enter the genre id: ")
+            isbn = input("Enter the ISBN number of the book: ")
+            publication_date = input("Enter the publication date in the format of YYYY-MM-DD: ")
+
+            data = (title, author_id, genre_id, isbn, publication_date)
+            query = "INSERT INTO books(title, author_id, genre_id, isbn, publication_date) VALUES(%s, %s, %s, %s, %s)"
+            cursor.execute(query, data)
+            conn.commit()
+            print('\33[32m', "Book added to database successfully", "\033[0m")
       
-    else:
-      print("\033[31m", "Book title, author have to be at least 3 characters and date has to be in valid format and refers to the past date", '\033[0m')
-       
+    except Error as e:
+      print("\033[91m", "Failed to add book to the database", e, "\033[0m")
+    
 
   def display_books(self):
-    output = {}
-    for isbn, book in self.books.items():
-          one_book = {  
-            isbn: {
-                'title': book.get_title(),
-                'author': book.get_author(),
-                'ISBN': book.get_isbn(),
-                'publication_date': book.get_publication_date(),
-                'is_available': book.get_is_available(),
-                'genre': book.get_genre_name(),
-                'category': book.get_category()
-            }
-          }
-          output.update(one_book)
-          
-    print("\033[92m",json.dumps(output, indent=4, sort_keys=True), "\033[0m")
-     
+    try:
+        with self.connect_database() as conn:
+          with conn.cursor() as cursor:
+            query = "SELECT * FROM books"
+            cursor.execute(query)
+            books = cursor.fetchall()
+            conn.commit()
+            print("\033[92m", "Books fetched successfully!", "\033[0m")
+            
+            for book in books:
+              print("\033[92m", book, "\033[0m")
+      
+    except Error as e:
+        print("\033[91m", "Failed to fetch books from database.", e, "\033[0m")
         
+        
+  def display_book_author_genre(self):
+      try:
+        with self.connect_database() as conn:
+          with conn.cursor() as cursor:
+            query = """
+              SELECT 
+                  books.id AS book_id,
+                  books.title AS book_title,
+                  authors.name AS author_name,
+                  authors.biography AS author_biography,
+                  genres.genre_name AS genre_name,
+                  genres.genre_details AS genre_details,
+                  books.isbn,
+                  books.publication_date,
+                  books.availability
+              FROM 
+                  books
+              JOIN 
+                  authors ON books.author_id = authors.id
+              JOIN 
+                  genres ON books.genre_id = genres.id;
+            """
+            cursor.execute(query)
+            data = cursor.fetchall()
+            conn.commit()
+            print("\033[92m", "Joined tables fetched successfully!", "\033[0m")
+            
+            for row in data:
+              print("\033[92m", row, "\033[0m")
+      
+      except Error as e:
+        print("\033[91m", "Failed to fetch books from database.", e, "\033[0m")
+
 
   def checkout_book(self):
     isbn = input("Enter the ISBN of the book to borrow: ")
-    library_id = input("What is the user's id? ")
-    if library_id in self.users: # ony person with library id can checkout the book
-      if isbn in self.books and self.books[isbn].borrow_book():
-        self.current_loans[isbn] = self.users[library_id]
-        
-        # Due date set 3 months from borrowing date
-        self.books[isbn].set_due_date(str(date.today() + relativedelta(months=+3)))
-        self.users[library_id].borrowed_books.append(self.books[isbn])
-        print('\33[32m', f"Book {self.books[isbn].get_title()} checked out to {self.users[library_id].name}","\033[0m")
-        
-      elif isbn in self.books and not self.books[isbn].get_is_available():
-        self.users[library_id].wait_list.append(self.books[isbn])
-        
-        
-    else:
-      print('\33[31m', f"User with id of {library_id} is not a member or book is not available.", "\033[0m")
+    user_id = input("What is the user's id? ")
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          query = f"SELECT id, title FROM books WHERE isbn='{isbn}'"
+          cursor.execute(query)
+          book = cursor.fetchone()
+          conn.commit()
+          print(book)
+          print("\033[92m", "Book found!", "\033[0m")
+          book_id = book[0]
+          today_date = datetime.today().strftime('%Y-%m-%d')
+          
+          query = "UPDATE books SET availability = %s WHERE id = %s"
+          cursor.execute(query, (0, book_id))
+          conn.commit()
+          
+          borrowed_book_info = (user_id, book_id, today_date)
+          print(borrowed_book_info)
+          query = "INSERT INTO borrowed_books(user_id, book_id, borrow_date) VALUES(%s, %s, %s)"
+          cursor.execute(query, borrowed_book_info)
+          conn.commit()
+          
+          print("\033[92m", f"Book {book[1]} has been borrowd", "\033[0m")
+
+    except Error as e:
+        print("\033[91m", "Failed to borrow the book.", e, "\033[0m")
+      
 
    
   def checkin_book(self):
     try:
-      isbn = input("Enter the ISBN of the book to return: ")
-      library_id = input("What is the users id that wants to return the book? ")
-      if isbn in self.books and isbn in self.current_loans and library_id:
-        self.books[isbn].return_book()
-        self.current_loans.pop(isbn)
-        
-        for item in self.users[library_id].borrowed_books:
-            if time.strptime(item.get_due_date(),"%Y-%m-%d") < time.strptime(str(date.today()),"%Y-%m-%d"):
-              print('There will be late fee for this user')
-            
-        
-        self.users[library_id].borrowed_books.remove(self.books[isbn])
-      print(f"Book {self.books[isbn].get_title()} checked in")
-
-      for user in self.users.values():
-        for item in user.wait_list:
-          if self.books[isbn].get_title() in item.get_title():
-            user.notification = f"{self.books[isbn].get_title()} book is now available"
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          isbn = input("Enter the ISBN of the book to return: ")
+          user_id = input("What is the users id that wants to return the book? ")
+          query = f"SELECT id, title FROM books WHERE isbn='{isbn}'"  
+          cursor.execute(query)
+          book = cursor.fetchone()
+          conn.commit()
+          book_id = book[0]
+          today_date = datetime.today().strftime('%Y-%m-%d')
+          
+          query = "UPDATE books SET availability =%s WHERE isbn=%s"
+          cursor.execute(query, (1, isbn))
+          conn.commit()
+          
+          
+          query = "UPDATE borrowed_books SET return_date = %s WHERE user_id = %s AND book_id = %s"
+          cursor.execute(query, (today_date, user_id, book_id))
+          conn.commit()
+          
+          print(f"Book {book[1]} has been check in")
       
     except:
       print('\33[31m', f"Book with ISBN {isbn} is not in the library or has not been checked out.", "\033[0m")
   
   
+  def display_borrowed_books(self):
+    try:
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          query = "SELECT * FROM borrowed_books"
+          query = """
+            SELECT
+             borrowed_books.id AS book_id,
+             borrowed_books.borrow_date AS borrow_date,
+             borrowed_books.return_date AS return_date,
+             users.name AS user_name,
+             users.id AS user_id,
+             books.title AS book_title,
+             books.isbn AS book_isbn
+             FROM borrowed_books
+             INNER JOIN books ON books.id = borrowed_books.book_id
+             INNER JOIN users ON borrowed_books.user_id = users.id
+          """
+          cursor.execute(query)
+          borrowed_books = cursor.fetchall()
+          conn.commit()
+          
+          for book in borrowed_books:
+            print(book)
+            
+    except Error as e:
+      print("\033[91m", "Failed to display the borrowed books.", e, "\033[0m")
+  
   # Displays books and relevant users that borrowed the books
   def display_borrower_users(self):
-    output = {}
-    for library_id, user in self.current_loans.items():
-      one_book_user = {
-        library_id: {
-          'library_id': user.library_id,
-          'name': user.name
-        }
-      }
-      output.update(one_book_user)
+     try:
+       with self.connect_database() as conn:
+         with conn.cursor() as cursor:
+           query = """
+              SELECT 
+              borrowed_books.user_id AS user_id,
+              borrowed_books.borrow_date AS borrow_date,
+              borrowed_books.return_date AS return_date,
+              users.name AS user_name,
+              users.library_id AS library_id
+              FROM borrowed_books
+              INNER JOIN users ON borrowed_books.user_id = users.id
+           """
+           cursor.execute(query)
+           borrowed_books = cursor.fetchall()
+           conn.commit()
+           
+           for book in borrowed_books:
+             print(book)
+      
+     except:
+       print("\033[91m", "Failed to users who borrowed books.", "\033[0m")
     
-    print("\033[92m",json.dumps(output, indent=4, sort_keys=True), "\033[0m")
-    
-
 
   def search_book(self):
     try:
-      search_criteria = input("Do you want to search based on 'isbn' or 'title'? ")
-      if search_criteria == 'isbn':
-        isbn = input("Enter the ISBN of the book you are looking for: ")
-        found_book = self.books[isbn]
-        print("\033[92m",{
-                  'title': found_book.get_title(),
-                  'author': found_book.get_author(),
-                  'ISBN': found_book.get_isbn(),
-                  'publication_date': found_book.get_publication_date(),
-                  'is_available': found_book.get_is_available(),
-                  'genre': found_book.get_genre_name()
-        }, "\033[0m")
-        
-      elif search_criteria == 'title':
-        title = input("Enter the title of the book you are looking for: ")
-        for book in self.books.values():
-          # Find book even if search query partially matches with the title of the book
-          if title.lower() in book.get_title().lower():
-              print("\033[92m",{
-                    'title': book.get_title(),
-                    'author': book.get_author(),
-                    'ISBN': book.get_isbn(),
-                    'publication_date': book.get_publication_date(),
-                    'is_available': book.get_is_available(),
-                    'genre': book.get_genre_name()
-                }, "\033[0m")
-    except:
-      print("No resilt found")
-
-  def add_author(self):
-    id = str(uuid.uuid4())
-    name = input("Enter the name of the author: ")
-    biography = input("Enter biography: ")
-    author = Author(name, biography)
-    self.authors[id] = author
-    
-    
-  def display_authors(self):
-    all_authors = {}
-    for id, author in self.authors.items():
-      one_author = { id: {'name': author.name, 'biography': author.biography} } 
-      all_authors.update(one_author)
-    print("\033[92m",json.dumps(all_authors, indent=4, sort_keys=True), "\033[0m")
-    # Display them in the tabular format:
-    data = [{'author': item.name, 'biography': item.biography} for item in self.authors.values()]
-    table = tabulate(data, headers="keys", tablefmt="grid")
-    print('\033[96m', table, '\033[0m')
-    
-
-  def display_author_details(self):
-    id = input("Enter the id of the author: ")
-    one_author = {id: {'name': self.authors[id].name, 'biography': self.authors[id].biography }}
-    print("\033[92m", one_author, "\033[0m")
-  
-  
-  def add_genre(self):
-    id = str(uuid.uuid4())
-    name = input("Enter the genre: ")
-    category = input("Enter category. 'Fiction' or 'Non-fiction': ")
-    genre = Genre(name, category)
-    self.genres[id] = genre
-  
-    
-  def display_genres(self):
-    all_genres = {}
-    for id, genre in self.genres.items():
-      one_genre = { id: {'name': genre.get_genre_name(), 'category': genre.get_category()} } 
-      all_genres.update(one_genre)
-    print("\033[92m",json.dumps(all_genres, indent=4, sort_keys=True), "\033[0m")
-
-
-  def display_genre_details(self):
-    id = input("Enter the id of the genre: ")
-    one_genre = {id: {'genre_name': self.genres[id].get_genre_name(), 'category': self.genres[id].get_category() }}
-    print("\033[92m", one_genre, "\033[0m")
-
-
-
-  #export data in binary mode and save them inside /data directory
-  def export_data(self):
-    directory = './data'
-    file_path = os.path.join(directory, 'books.txt')
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    
-    try:
-      with open(file_path, 'wb') as file:
-          pickle.dump(self.books, file)
+      with self.connect_database() as conn:
+        with conn.cursor() as cursor:
+          isbn = input("Enter the ISBN of the book you are looking for: ")
+          title = input("Enter the title of the book you are looking for: ")
+          query = "SELECT * FROM books WHERE isbn = %s OR title = %s"
+          cursor.execute(query, (isbn, title))
+          book = cursor.fetchone()
+          conn.commit()
           
-      with open('data/users.txt', 'wb') as file:   
-          pickle.dump(self.users, file)
-          
-      with open('data/authors.txt', 'wb') as file:   
-          pickle.dump(self.authors, file)
-          
-      with open('data/genres.txt', 'wb') as file:   
-          pickle.dump(self.genres, file)
-          
-      with open('data/current_loans.txt', 'wb') as file:   
-          pickle.dump(self.current_loans, file)
-    except:
-      print("Error while exporting data")
-
-
-  # Import data in binary mode from /data directory  convert it to dictionary 
-  def import_data(self):
-    with open('data/books.txt', 'rb') as file:
-       books_dict = pickle.load(file)
-       self.books = books_dict
-       
-    with open('data/users.txt', 'rb') as file:
-       users_dict = pickle.load(file)
-       self.users = users_dict  
- 
-    with open('data/authors.txt', 'rb') as file:
-       authors_dict = pickle.load(file)
-       self.authors = authors_dict  
-     
-    with open('data/genres.txt', 'rb') as file:
-       genres_dict = pickle.load(file)
-       self.genres = genres_dict       
-
-    with open('data/current_loans.txt', 'rb') as file:
-       curren_loans_dict = pickle.load(file)
-       self.curren_loans = curren_loans_dict  
+          print("\033[92m", "Book details fetched successfully!", "\033[0m")
+          print(book)
+    
+    except Error as e:
+          print("\033[91m", "Failed to fetch book details from database", e, "\033[0m")     
+      
+      
+      
+      
