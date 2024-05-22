@@ -1,26 +1,16 @@
-import re, json, os, pickle, uuid, time
-from datetime import date, datetime
-
-
-from book import Book
-from user import User
-from author import Author
-from genre import Genre
+import re, uuid
+from datetime import datetime
 import variables
 
 import mysql.connector
 from mysql.connector import Error
 
-from collections import namedtuple
+from user import User
+from author import Author
+from genre import Genre
+from book import Book
 
 class Library:
-  def __init__(self):
-    self.books = {}
-    self.users = {}  
-    self.authors = {}
-    self.genres = {}
-    self.current_loans = {}
-    
   # Connection function used as an in-class method
   def connect_database(self):
     try:
@@ -41,18 +31,21 @@ class Library:
     
   def add_user(self):
     # Connection Management used using 'with' keyword to remove duplicate codes for closing cursor and connection
-    # Regex used for name of user. Similar validations can be used for other fields.
+    # Regex used for name of user. In this case error raised if name is not match with regex. Other solution: re.match can be used as a condition. If match, query can be run, otherwise error. In this case, first method was used Similar validations can be used for other fields.
     try:
       with self.connect_database() as conn:
         with conn.cursor() as cursor:
            user_name = input("Enter the user name: ")
+           # Charater length limit based on users table, library_id field Varchar(10)
            library_id = str(uuid.uuid4())[:10:]
            user_name_regex = r"[A-Za-z0-9]{3,}"
               
            if not re.match(user_name_regex, user_name):
              raise ValueError("User name must contain only alphanumeric characters and must be at least 3 characters long.")
           
-           data = (user_name, library_id)
+           user = User(user_name, library_id)
+          
+           data = (user.name, user.library_id)
            query = "INSERT INTO users(name, library_id) VALUES (%s, %s)"
           
            cursor.execute(query, data)
@@ -138,8 +131,11 @@ class Library:
         with conn.cursor() as cursor:
           genre_name = input("Enter the genre name: ")
           genre_details = input("Enter the genre details: ")
+          
+          genre = Genre(genre_name, genre_details)
+          
           query = "INSERT INTO genres(genre_name, genre_details) VALUES(%s, %s)"
-          cursor.execute(query, (genre_name, genre_details))
+          cursor.execute(query, (genre.get_genre_name(), genre.get_genre_details()))
           conn.commit()
           
           print("\033[92m", "Genre added successfully!", "\033[0m")
@@ -165,7 +161,6 @@ class Library:
         print("\033[91m", "Failed to fetch genres from database.", e, "\033[0m")
 
       
-      
     
   def add_book(self):
     try:
@@ -177,9 +172,9 @@ class Library:
             isbn = input("Enter the ISBN number of the book: ")
             publication_date = input("Enter the publication date in the format of YYYY-MM-DD: ")
 
-            data = (title, author_id, genre_id, isbn, publication_date)
+            book = Book(title, author_id, genre_id, isbn, publication_date)
             query = "INSERT INTO books(title, author_id, genre_id, isbn, publication_date) VALUES(%s, %s, %s, %s, %s)"
-            cursor.execute(query, data)
+            cursor.execute(query, (book.title, book.author_id, book.genre_id, book.ISBN, book.publication_date))
             conn.commit()
             print('\33[32m', "Book added to database successfully", "\033[0m")
       

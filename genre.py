@@ -1,10 +1,10 @@
 class Genre:
-  def __init__(self, genre_name, category):
+  def __init__(self, genre_name, genre_details):
     self.__genre_name = genre_name
-    self.__category = category
+    self.__genre_details = genre_details
     
   def get_genre_name(self):
     return self.__genre_name
   
-  def get_category(self):
-    return self.__category
+  def get_genre_details(self):
+    return self.__genre_details
