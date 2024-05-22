@@ -41,14 +41,16 @@ class Library:
     
   def add_user(self):
     # Connection Management used using 'with' keyword to remove duplicate codes for closing cursor and connection
+    # Regex used for name of user. Similar validations can be used for other fields.
     try:
       with self.connect_database() as conn:
         with conn.cursor() as cursor:
            user_name = input("Enter the user name: ")
-           library_id = input("What is the user library id? ")
-      
-           if not user_name or not library_id:
-                raise ValueError("User name and library ID cannot be empty.")
+           library_id = str(uuid.uuid4())[:10:]
+           user_name_regex = r"[A-Za-z0-9]{3,}"
+              
+           if not re.match(user_name_regex, user_name):
+             raise ValueError("User name must contain only alphanumeric characters and must be at least 3 characters long.")
           
            data = (user_name, library_id)
            query = "INSERT INTO users(name, library_id) VALUES (%s, %s)"
@@ -234,8 +236,9 @@ class Library:
       
       except Error as e:
         print("\033[91m", "Failed to fetch books from database.", e, "\033[0m")
-
-
+        
+        
+  # Once checkout the book, availibility set to 0 in books table,
   def checkout_book(self):
     isbn = input("Enter the ISBN of the book to borrow: ")
     user_id = input("What is the user's id? ")
@@ -247,7 +250,6 @@ class Library:
           book = cursor.fetchone()
           conn.commit()
           print(book)
-          print("\033[92m", "Book found!", "\033[0m")
           book_id = book[0]
           today_date = datetime.today().strftime('%Y-%m-%d')
           
@@ -295,7 +297,9 @@ class Library:
     except:
       print('\33[31m', f"Book with ISBN {isbn} is not in the library or has not been checked out.", "\033[0m")
   
-  
+  # Borrowed books table shows the history of the books that were borrowed now or in the past. 
+  # Other scenario would be to remove the book from table once checkin
+  # In this case, first scenario has been used
   def display_borrowed_books(self):
     try:
       with self.connect_database() as conn:
@@ -319,7 +323,7 @@ class Library:
           conn.commit()
           
           for book in borrowed_books:
-            print(book)
+            print('\33[33m', book, '\033[0m')
             
     except Error as e:
       print("\033[91m", "Failed to display the borrowed books.", e, "\033[0m")
@@ -344,7 +348,7 @@ class Library:
            conn.commit()
            
            for book in borrowed_books:
-             print(book)
+             print('\33[33m', book, '\033[0m')
       
      except:
        print("\033[91m", "Failed to users who borrowed books.", "\033[0m")

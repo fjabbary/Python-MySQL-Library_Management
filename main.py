@@ -1,60 +1,99 @@
-print("Welcome to the Library Management System!")
+print("\033[1m", "Welcome to the Library Management System!", "\033[0m")
 
 from library import Library
+import uuid
+
+
+def sub_main(library):
+        while True:
+            try: 
+                operation = input("What operation you want to do? Enter 'user', 'author', 'genre', 'book', or 'exit': ")
+                if operation == 'user':
+                    op = input("Choose type of operation for user. Enter 'add' or 'display': ")
+                    if op == 'add':
+                        library.add_user()
+                    elif op == 'display':
+                        library.display_users()
+                
+                elif operation == 'author':
+                    op = input("Choose type of operation for author. Enter 'add', 'display', or 'search': ")
+                    if op == 'add':
+                        library.add_author()
+                    elif op == 'display':
+                        library.display_authors()
+                    elif op == 'search':
+                        library.search_author()
+                    
+                elif operation == 'genre':
+                    op = input("Choose type of operation for genre. Enter 'add' or 'display': ")
+                    if op == 'add':
+                        library.add_genre()
+                    elif op == 'display':
+                        library.display_genres()
+                
+                elif operation == 'book':
+                    op = input("Choose type of operation for book. Enter 'add', 'display', 'display_all_info', 'checkout', 'checkin', 'display_borrowed_books', 'display_borrowed_users', 'search': ")
+                    if op == 'add':
+                        library.add_book()
+                    elif op == 'display':
+                        library.display_books()
+                    elif op == 'display_all_info':
+                        library.display_book_author_genre()
+                    elif op == 'checkout':
+                        library.checkout_book()
+                    elif op == 'checkin':
+                        library.checkin_book()
+                    elif op == 'display_borrowed_books':
+                        library.display_borrowed_books()
+                    elif op == 'display_borrowed_users':
+                        library.display_borrower_users()
+                    elif op == 'search':
+                        library.search_book()
+                        
+              
+                elif operation == "exit":
+                    exit()
+                    
+                elif operation == "":
+                    print("Thanks for supporting your public Library! Have a nice day :)")
+                    break
+                else:
+                    print("Please enter a valid choice")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+
 
 def main_app():
     library = Library()
-
-    while True:
-        
-        print("\n1. Add User \n2. Display Users \n3. Add Author \n4. Display Authors \n5. Search Author \n6. Add Genre \n7. Display Genres \n8. Add Book \n9. Display Books \n10. Display book_author_genre \n11. Checkout Book \n12. Checkin Book \n13. Display Borrowed Books \n14. Display Borrower Users \n15. Search Book")
-        choice = input("Enter your choice: ")
-        
-        try: 
-            if choice == "1":
-                library.add_user()
-            elif choice == "2":
-                library.display_users()   
-            elif choice == "3":
-                library.add_author()   
-            elif choice == "4":
-                library.display_authors()  
-            elif choice == "5":
-                library.search_author()
-            elif choice == "6":
-                library.add_genre()    
-            elif choice == "7":
-                library.display_genres() 
-            elif choice == "8":
-                library.add_book()
-            elif choice == "9":
-                library.display_books()
-            elif choice == "10":
-                library.display_book_author_genre()    
-            elif choice == "11":
-                library.checkout_book()
-            elif choice == "12":
-                library.checkin_book()
-            elif choice == "13":
-                library.display_borrowed_books()
-            elif choice == "14":
-                library.display_borrower_users()  
-            elif choice == "15":
-                library.search_book()
-                
-                
-
-            elif choice == "17":
-                exit()
-                
-            elif choice == "":
-                print("Thanks for supporting your public Library! Have a nice day :)")
-                break
+    library.connect_database()
+   
+    with library.connect_database() as conn:
+         print("\033[1m", "Please login with name and library ID to use the app", "\033[0m")
+         # Authentication
+         user_name = input("Enter user name: ")
+         library_id = input("Enter library id: ")
+         with conn.cursor() as cursor:
+            query = "SELECT * FROM users WHERE name=%s AND library_id=%s"
+            cursor.execute(query, (user_name, library_id))
+            user = cursor.fetchone()
+            conn.commit()
+            
+            if user: 
+                print('\33[32m', f'{user[1]} is authenticated', "\033[0m")
+                sub_main(library)
             else:
-                print("Please enter a valid choice")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
+                print("\033[91m", 'User is not authenticated. You need to register before using App', "\033[0m")
+                user_name = input("Enter name you want to register as a username: ")
+                # System generate library id assigned to user who wants to register (10 charaters only to match with table field VARCHAR(10))
+                library_id = str(uuid.uuid4())[:10:]
+                with conn.cursor() as cursor:
+                    query = "INSERT INTO users(name, library_id) VALUES(%s, %s)"
+                    cursor.execute(query, (user_name, library_id))
+                    conn.commit()
+                    print("\033[32m", f"User {user_name} is registered. Your library id is {library_id}. Please keep note this ID since it is required to login in the future in order to manage the library", "\033[0m")
+                        
+                
+      
 if __name__ == "__main__":
     main_app()
-
